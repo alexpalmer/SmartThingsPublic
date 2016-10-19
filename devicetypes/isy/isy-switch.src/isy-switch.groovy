@@ -52,23 +52,57 @@ def parse(String description) {
 
         def xmlTop = new XmlSlurper().parseText(xmlText)
         def nodes = xmlTop.node
+        
         //log.debug 'Nodes: ' + nodes.size()
-
+		
+		
         def childMap = [:]
-        parent.getChildDevices().each { child ->
+        parent.getChildDevices(false).each { child ->
             def childNodeAddr = child.getDataValue("nodeAddr")
             childMap[childNodeAddr] = child
+            log.debug "Adding Child " + child + "ID: " + childNodeAddr
         }
 
         nodes.each { node ->
             def nodeAddr = node.attributes().id
             def status = ''
+            def formatted = ''
+            def humidity = ''
+            def heatSpt = ''
+            def coolSpt = ''
+            def tstatMd= ''
 
             node.property.each { prop ->
                 if (prop.attributes().id == 'ST') {
                     status = prop.attributes().value
+                    formatted = prop.attributes().formatted
                 }
             }
+            node.property.each { prop ->
+                if (prop.attributes().id == 'CLIHUM') {
+                    humidity = prop.attributes().formatted
+                }
+            }
+            node.property.each { prop ->
+                if (prop.attributes().id == 'CLISPH') {
+                    heatSpt = prop.attributes().formatted
+                }
+            }
+            node.property.each { prop ->
+                if (prop.attributes().id == 'CLISPC') {
+                    coolSpt = prop.attributes().formatted
+                }
+            }
+            node.property.each { prop ->
+                if (prop.attributes().id == 'CLIMD') {
+                    tstatMd = prop.attributes().formatted
+                    if (tstatMd == 'Heat') {tstatMd = 'heat'}
+                    if (tstatMd == 'Off') {tstatMd = 'off'}
+                    if (tstatMd == 'Cool') {tstatMd = 'cool'}
+                    if (tstatMd == 'Auto') {tstatMd = 'auto'}
+                 }
+            }
+            
 
             if (status != '' && childMap[nodeAddr]) {
                 def child = childMap[nodeAddr]
@@ -85,6 +119,14 @@ def parse(String description) {
 
                     if (status != 0) {
                         child.sendEvent(name: 'level', value: status)
+                    }
+                    if (child.label == "Thermostat") {
+                    	log.debug "Thermostat Found: "+ formatted + "df " + humidity + " %RH "+ tstatMd
+                        child.sendEvent (name: 'temperature', value: formatted)
+                        child.sendEvent (name: 'humidity', value: humidity)
+                        child.sendEvent (name: 'heatingSetpoint', value: heatSpt)
+                        child.sendEvent (name: 'coolingSetpoint', value: coolSpt)
+                        child.sendEvent (name: 'thermostatMode', value: tstatMd)
                     }
                 }
             }
