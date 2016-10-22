@@ -24,8 +24,13 @@ metadata {
         
         command "fanOn"
         command "fanAuto"
-        command "setpointUp"
-        command "setpointDown"
+        command "HsetpointUp"
+        command "CsetpointUp"
+        command "HsetpointDown"
+        command "CsetpointDown"
+        command "heat68"
+        command "heat65"
+        
         //command "setThermostatMode"
     }
 
@@ -33,7 +38,7 @@ metadata {
     }
 	
    tiles {
-        valueTile("frontTile", "device.temperature", width: 1, height: 1) {
+        valueTile("frontTile", "device.temperature", width: 1, height: 1, canChangeIcon: true) {
             state("temperature", label:'${currentValue}°', backgroundColor:"#e8e3d8")
         }
     
@@ -74,21 +79,33 @@ metadata {
             state "cooling", backgroundColor:"#90d0e8"
             state "fan only", backgroundColor:"#e8e3d8"
 		}
-        standardTile("setpointUp", "device.thermostatSetpoint", decoration: "flat") {
-            state "setpointUp", action:"setpointUp", icon:"st.thermostat.thermostat-up"
+        standardTile("HsetpointUp", "device.thermostatSetpoint", decoration: "flat") {
+            state "HsetpointUp", action:"HsetpointUp", icon:"st.thermostat.thermostat-up"
         }
-        
-        standardTile("setpointDown", "device.thermostatSetpoint", decoration: "flat") {
-            state "setpointDown", action:"setpointDown", icon:"st.thermostat.thermostat-down"
+        standardTile("CsetpointDown", "device.thermostatSetpoint", decoration: "flat") {
+            state "CsetpointDown", action:"CsetpointDown", icon:"st.thermostat.thermostat-down"
+        }
+        standardTile("CsetpointUp", "device.thermostatSetpoint", decoration: "flat") {
+            state "CsetpointUp", action:"CsetpointUp", icon:"st.thermostat.thermostat-up"
+        }
+        standardTile("HsetpointDown", "device.thermostatSetpoint", decoration: "flat") {
+            state "HsetpointDown", action:"HsetpointDown", icon:"st.thermostat.thermostat-down"
         }
 
         standardTile("refresh", "device.temperature", decoration: "flat") {
             state "default", action:"refresh.refresh", icon:"st.secondary.refresh"
         }
+        standardTile("heat68", "device.temperature", decoration: "flat") {
+            state "default", label: 'set 68°', action:"heat68", icon:"st.Home.home1"
+        }
+        standardTile("heat65", "device.temperature", decoration: "flat") {
+            state "default", label: 'set 65°', action:"heat65", icon:"st.Home.home2"
+        }
         
         
       main "frontTile"
-      details(["temperature","humidity", "fanMode", "thermostatMode", "heatingSetpoint", "coolingSetpoint", "setpointUp", "setpointDown","refresh"])
+      details(["HsetpointUp","CsetpointUp", "fanMode", "heatingSetpoint", "coolingSetpoint", "thermostatMode", "HsetpointDown", "CsetpointDown", "refresh","heat68","heat65"])
+      //details(["temperature","humidity", "fanMode", "thermostatMode", "heatingSetpoint", "coolingSetpoint", "setpointUp", "setpointDown","refresh","heat68"])
   }
 }
 
@@ -138,8 +155,8 @@ def getRequest(path) {
 
 // handle commands
 
-def setpointUp() {
-    log.debug "Executing setpointUP"
+def HsetpointUp() {
+    log.debug "Executing HsetpointUP"
     def newHsp = ''
     def oldHsp = ''
     
@@ -151,9 +168,13 @@ def setpointUp() {
 
     
     def node = getDataValue("nodeAddr").replaceAll(" ", "%20")
-    def path = "/rest/nodes/${node}/cmd/CLISPH/${newHsp}"
+    def path = ""
+    path = "/rest/nodes/${node}/cmd/CLISPH/${newHsp}"
     getRequest(path)
-    
+ }
+ 
+ def CsetpointUp() {
+    log.debug "Executing CsetpointUP"
     def newCsp = ''
     def oldCsp = ''
     
@@ -164,29 +185,31 @@ def setpointUp() {
     newCsp = newCsp*2
 
     
-    node = getDataValue("nodeAddr").replaceAll(" ", "%20")
-    path = "/rest/nodes/${node}/cmd/CLISPC/${newCsp}"
+    def node = getDataValue("nodeAddr").replaceAll(" ", "%20")
+    def path = "/rest/nodes/${node}/cmd/CLISPC/${newCsp}"
     getRequest(path)
+ }
+   
     
-    
-}
-
-def setpointDown() {
-    log.debug "Executing setpointDown"
+def HsetpointDown() {
+    log.debug "Executing HsetpointDown"
     def newHsp = ''
     def oldHsp = ''
-    
+        
     oldHsp = device.currentValue("heatingSetpoint")
-    
     newHsp = oldHsp - 1
     sendEvent(name: 'heatingSetpoint', value: newHsp)
     newHsp = newHsp*2
-
     
     def node = getDataValue("nodeAddr").replaceAll(" ", "%20")
     def path = "/rest/nodes/${node}/cmd/CLISPH/${newHsp}"
     getRequest(path)
     
+    
+}
+
+def CsetpointDown() {
+	log.debug "Executing CsetpointDown"
     def newCsp = ''
     def oldCsp = ''
     
@@ -197,11 +220,33 @@ def setpointDown() {
     newCsp = newCsp*2
 
     
-    node = getDataValue("nodeAddr").replaceAll(" ", "%20")
-    path = "/rest/nodes/${node}/cmd/CLISPC/${newCsp}"
+    def node = getDataValue("nodeAddr").replaceAll(" ", "%20")
+    def path = "/rest/nodes/${node}/cmd/CLISPC/${newCsp}"
     getRequest(path)
-     
 }
+
+def heat68() {
+	log.debug "Executing heat68"
+	def newHsp = 68
+    sendEvent(name: 'heatingSetpoint', value: newHsp)
+    newHsp = newHsp * 2
+    def node = getDataValue("nodeAddr").replaceAll(" ", "%20")
+    def path = "/rest/nodes/${node}/cmd/CLISPH/${newHsp}"
+    getRequest(path)
+
+}
+
+def heat65() {
+	log.debug "Executing heat68"
+	def newHsp = 65
+    sendEvent(name: 'heatingSetpoint', value: newHsp)
+    newHsp = newHsp * 2
+    def node = getDataValue("nodeAddr").replaceAll(" ", "%20")
+    def path = "/rest/nodes/${node}/cmd/CLISPH/${newHsp}"
+    getRequest(path)
+
+}
+
 
 def fanAuto() {
     log.debug "Executing Fan-Auto"
