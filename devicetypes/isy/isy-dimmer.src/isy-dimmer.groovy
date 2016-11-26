@@ -47,7 +47,147 @@ metadata {
 
 // parse events into attributes
 def parse(String description) {
-    log.debug "this doesn't do anything..."
+    log.debug "Parsing Dev ${device.deviceNetworkId} '${description}'"
+
+    def parsedEvent = parseDiscoveryMessage(description)
+    //log.debug "Parsed event: " + parsedEvent
+    //log.debug "Body: " + parsedEvent['body']
+    if (parsedEvent['body'] != null) {
+        def xmlText = new String(parsedEvent.body.decodeBase64())
+        log.debug 'Device Type Decoded body: ' + xmlText
+
+        def xmlTop = new XmlSlurper().parseText(xmlText)
+        def nodes = xmlTop.node
+        
+              
+        //log.debug 'Nodes: ' + nodes.name()
+        if (xmlText.contains('node')) {
+        log.debug 'Node Running'
+        def childMap = [:]
+        parent.getChildDevices(false).each { child ->
+            def childNodeAddr = child.getDataValue("nodeAddr")
+            childMap[childNodeAddr] = child
+            log.debug "Adding Child " + child + "ID: " + childNodeAddr
+        }
+        nodes.each { node ->
+            def nodeAddr = node.attributes().id
+            def status = ''
+            def formatted = ''
+            def humidity = ''
+            def heatSpt = ''
+            def coolSpt = ''
+            def tstatMd= ''
+
+            node.property.each { prop ->
+                if (prop.attributes().id == 'ST') {
+                    status = prop.attributes().value
+                    formatted = prop.attributes().formatted
+                }
+            }
+            node.property.each { prop ->
+                if (prop.attributes().id == 'CLIHUM') {
+                    humidity = prop.attributes().formatted
+                }
+            }
+            node.property.each { prop ->
+                if (prop.attributes().id == 'CLISPH') {
+                    heatSpt = prop.attributes().formatted
+                }
+            }
+            node.property.each { prop ->
+                if (prop.attributes().id == 'CLISPC') {
+                    coolSpt = prop.attributes().formatted
+                }
+            }
+            node.property.each { prop ->
+                if (prop.attributes().id == 'CLIMD') {
+                    tstatMd = prop.attributes().formatted
+                    if (tstatMd == 'Heat') {tstatMd = 'heat'}
+                    if (tstatMd == 'Off') {tstatMd = 'off'}
+                    if (tstatMd == 'Cool') {tstatMd = 'cool'}
+                    if (tstatMd == 'Auto') {tstatMd = 'auto'}
+                 }
+            }
+            
+
+            if (status != '' && childMap[nodeAddr]) {
+                def child = childMap[nodeAddr]
+
+                if (child.getDataValue("nodeAddr") == nodeAddr) {
+                    def value = 'on'
+                    if (status == '0' || status == " ") {
+                        value = 'off'
+                    }
+                    if (status != " ") {
+                    status = status.toFloat() * 99.0 / 255.0
+                    status = status.toInteger()
+                    }
+                    log.debug "Updating ${child.label} ${nodeAddr} to ${value}/${status}"
+                    child.sendEvent(name: 'switch', value: value)
+
+                    if (status != 0) {
+                        child.sendEvent(name: 'level', value: status)
+                    }
+                    if (child.label == "Thermostat") {
+                    	log.debug "Thermostat Found: "+ formatted + "df " + humidity + " %RH "+ tstatMd
+                        child.sendEvent (name: 'temperature', value: formatted)
+                        child.sendEvent (name: 'humidity', value: humidity)
+                        child.sendEvent (name: 'heatingSetpoint', value: heatSpt)
+                        child.sendEvent (name: 'coolingSetpoint', value: coolSpt)
+                        child.sendEvent (name: 'thermostatMode', value: tstatMd)
+                    }
+                }
+            
+            }
+        }
+        }
+        
+        def stnode = xmlTop
+        //log.debug 'stnode: ' + stnode.name()
+        
+        if (xmlText.contains('status')) {
+        log.debug 'Running Status'	
+            def childMap = [:]
+        parent.getChildDevices(false).each { child ->
+            def childNodeAddr = child.getDataValue("nodeAddr")
+            childMap[childNodeAddr] = child
+            log.debug "Adding Child " + child + "ID: " + childNodeAddr
+        }
+            stnode.each { node ->
+            	def type = ''
+                def area = ''
+                def zone = ''
+                def zoneref = ''
+                def val = ''
+                
+                stnode.ze.each { ze ->
+                if (ze.attributes().type == '51') {
+                    zone = ze.attributes().zone
+                    zoneref = 'ZE ' + zone
+                    val = ze.attributes().val
+                    log.debug 'Zone: ' + zone + ' Value: ' + val + ' ZoneRef: ' + zoneref
+                }
+                if (zone != '' && val != '' && childMap[zoneref]) {
+                def child = childMap[zoneref]
+				if (child.getDataValue("nodeAddr") == zoneref) {
+                def value = 'open'
+                if (val == '0') {
+                      value = 'closed'
+                	}
+                log.debug "Found: " + zoneref + ' Child: ' + child.name
+                log.debug "Updating ${child.name} ${zoneref} to ${value}/${val}"
+                child.sendEvent(name: 'contact', value: value)
+                }
+                }
+                }
+                
+            }
+        }
+        
+        
+    }
+    
+
 
     
 }

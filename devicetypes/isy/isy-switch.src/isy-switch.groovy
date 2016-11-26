@@ -48,21 +48,21 @@ def parse(String description) {
     //log.debug "Body: " + parsedEvent['body']
     if (parsedEvent['body'] != null) {
         def xmlText = new String(parsedEvent.body.decodeBase64())
-        //log.debug 'Device Type Decoded body: ' + xmlText
+        log.debug 'Device Type Decoded body: ' + xmlText
 
         def xmlTop = new XmlSlurper().parseText(xmlText)
         def nodes = xmlTop.node
         
-        //log.debug 'Nodes: ' + nodes.size()
-		
-		
+              
+        //log.debug 'Nodes: ' + nodes.name()
+        if (xmlText.contains('node')) {
+        log.debug 'Node Running'
         def childMap = [:]
         parent.getChildDevices(false).each { child ->
             def childNodeAddr = child.getDataValue("nodeAddr")
             childMap[childNodeAddr] = child
             log.debug "Adding Child " + child + "ID: " + childNodeAddr
         }
-
         nodes.each { node ->
             def nodeAddr = node.attributes().id
             def status = ''
@@ -129,9 +129,56 @@ def parse(String description) {
                         child.sendEvent (name: 'thermostatMode', value: tstatMd)
                     }
                 }
+            
             }
         }
+        }
+        
+        def stnode = xmlTop
+        //log.debug 'stnode: ' + stnode.name()
+        
+        if (xmlText.contains('status')) {
+        log.debug 'Running Status'	
+            def childMap = [:]
+        parent.getChildDevices(false).each { child ->
+            def childNodeAddr = child.getDataValue("nodeAddr")
+            childMap[childNodeAddr] = child
+            log.debug "Adding Child " + child + "ID: " + childNodeAddr
+        }
+            stnode.each { node ->
+            	def type = ''
+                def area = ''
+                def zone = ''
+                def zoneref = ''
+                def val = ''
+                
+                stnode.ze.each { ze ->
+                if (ze.attributes().type == '51') {
+                    zone = ze.attributes().zone
+                    zoneref = 'ZE ' + zone
+                    val = ze.attributes().val
+                    log.debug 'Zone: ' + zone + ' Value: ' + val + ' ZoneRef: ' + zoneref
+                }
+                if (zone != '' && val != '' && childMap[zoneref]) {
+                def child = childMap[zoneref]
+				if (child.getDataValue("nodeAddr") == zoneref) {
+                def value = 'open'
+                if (val == '0') {
+                      value = 'closed'
+                	}
+                log.debug "Found: " + zoneref + ' Child: ' + child.name
+                log.debug "Updating ${child.name} ${zoneref} to ${value}/${val}"
+                child.sendEvent(name: 'contact', value: value)
+                }
+                }
+                }
+                
+            }
+        }
+        
+        
     }
+    
 }
 
 private Integer convertHexToInt(hex) {

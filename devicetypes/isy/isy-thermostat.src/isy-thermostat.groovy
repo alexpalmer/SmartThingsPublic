@@ -104,7 +104,7 @@ metadata {
         
         
       main "frontTile"
-      details(["HsetpointUp","CsetpointUp", "fanMode", "heatingSetpoint", "coolingSetpoint", "thermostatMode", "HsetpointDown", "CsetpointDown", "refresh","heat68","heat65"])
+      details(["HsetpointUp","CsetpointUp", "fanMode", "heatingSetpoint", "coolingSetpoint", "thermostatMode", "HsetpointDown", "CsetpointDown", "temperature", "heat68","heat65","humidity","refresh"])
       //details(["temperature","humidity", "fanMode", "thermostatMode", "heatingSetpoint", "coolingSetpoint", "setpointUp", "setpointDown","refresh","heat68"])
   }
 }
@@ -170,6 +170,28 @@ def HsetpointUp() {
     def node = getDataValue("nodeAddr").replaceAll(" ", "%20")
     def path = ""
     path = "/rest/nodes/${node}/cmd/CLISPH/${newHsp}"
+    getRequest(path)
+ }
+ 
+ def setHeatingSetpoint(newHsp) {
+ 	log.debug "Setting Heat SP to: " + newHsp
+    sendEvent(name: 'heatingSetpoint', value: newHsp)
+    newHsp = newHsp*2
+    
+    def node = getDataValue("nodeAddr").replaceAll(" ", "%20")
+    def path = ""
+    path = "/rest/nodes/${node}/cmd/CLISPH/${newHsp}"
+    getRequest(path)
+ }
+ 
+ def setCooolingSetpoint(newCsp) {
+ 	log.debug "Setting Cool SP to: " + newCsp
+    sendEvent(name: 'coolingSetpoint', value: newCsp)
+    newCsp = newCsp*2
+    
+    def node = getDataValue("nodeAddr").replaceAll(" ", "%20")
+    def path = ""
+    path = "/rest/nodes/${node}/cmd/CLISPC/${newCsp}"
     getRequest(path)
  }
  
