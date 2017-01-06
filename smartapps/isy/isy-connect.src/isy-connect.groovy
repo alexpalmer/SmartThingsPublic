@@ -31,6 +31,7 @@ preferences {
     page(name:"isyPage", title:"ISY Setup 2", content:"isyPage")
     page(name:"nodePage", title:"ISY Setup 3", content:"nodePage")
     page(name:"ELKpref", title:"ELK Integration", content:"ELKpref")
+    page(name:"addnode", title:"Add CUstom Node", content:"addnode")
 }
 
 // Credentials preferences page - collect ISY username and password
@@ -43,7 +44,11 @@ def credPage() {
             input "username", "text", title: "Username"
             input "password", "password", title: "Password"
         }
+        section("Add custom Node?"){
+        	href "addnode", title: "Add Custom Node", required: false
+        }
     }
+    
 }
 
 // ISY selection page - discover and choose which ISY to control
@@ -76,6 +81,30 @@ def ELKpref() {
             input "selectedZones", "enum", required:false, title:"Select Zones", multiple:true, options:["ZE 1","ZE 2"]
         }
         }
+}
+
+def addnode() {
+	def createnode = customaddnode()
+    return dynamicPage(name:"addnode", title:"add node", install:false, uninstall: false) {
+        section("Custom Node") {
+            input "customnode", "string", required:false, title:"node"
+        }
+        }
+     
+}
+
+def customaddnode() {
+	log.debug 'Custom Node: ' + $customnode
+    def d = addChildDevice("isy", "ISY Switch", '0021B900FEAA:123', null, [
+                    "label": 'New Custom',
+                    "data": [
+                        "nodeAddr": 'nodeAddr',
+                        "ip": 'IP',
+                        "port": 'PORT',
+                        "username": 'admin',
+                        "password": 'admin'
+                    ]
+                ])
 }
 
 
