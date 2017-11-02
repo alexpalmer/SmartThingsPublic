@@ -20,6 +20,7 @@ metadata {
         capability "Polling"
         capability "Refresh"
         capability "Actuator"
+        command "updateNA"
     }
 
     simulator {
@@ -33,10 +34,22 @@ metadata {
         standardTile("refresh", "device.switch", inactiveLabel: false, decoration: "flat") {
             state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
         }
+        standardTile("update", "device.contact", inactiveLabel: false, decoration: "flat") {
+            state "default", label:'', action:"updateNA", icon:"st.Electronics.electronics6"
+        }
 
         main "switch"
-        details (["switch", "refresh"])
+        details (["switch", "refresh","update"])
     }
+}
+
+def updateNA() {
+	log.debug "Running Update NA"
+    def str = device.deviceNetworkId.split(':')
+    log.debug str[1]
+    device.updateDataValue("nodeAddr", str[1])
+    device.updateDataValue("port",'0050')
+    device.updateDataValue("ip",'C0A81003')
 }
 
 // parse events into attributes
@@ -100,6 +113,7 @@ def parse(String description) {
                     if (tstatMd == 'Off') {tstatMd = 'off'}
                     if (tstatMd == 'Cool') {tstatMd = 'cool'}
                     if (tstatMd == 'Auto') {tstatMd = 'auto'}
+                    if (tstatMd == 'Program Auto') {tstatMd = 'pauto'}
                  }
             }
             
@@ -143,11 +157,13 @@ def parse(String description) {
         parent.getChildDevices(false).each { child ->
             def childNodeAddr = child.getDataValue("nodeAddr")
             childMap[childNodeAddr] = child
-            log.debug "Adding Child " + child + "ID: " + childNodeAddr
+            //log.debug "Adding Child " + child + "ID: " + childNodeAddr
         }
             stnode.each { node ->
             	def type = ''
                 def area = ''
+                def areatype = ''
+                def alarmref = 'ELK-M1'
                 def zone = ''
                 def zoneref = ''
                 def val = ''
@@ -173,7 +189,78 @@ def parse(String description) {
                 }
                 }
                 
-            }
+                stnode.ae.each { ae ->
+                if (ae.attributes().type == '1' || ae.attributes().type == '2' || ae.attributes().type == '3') {
+                    areatype = ae.attributes().type
+                    val = ae.attributes().val
+                    //alarmref = "ELK-M1"
+                    log.debug 'AreaType: ' + areatype + ' Value: ' + val
+                }
+                if (areatype != '' && val != '' && childMap[alarmref]) {
+                	def child = childMap[alarmref]
+                    def value = ''
+                    log.debug "Looking for child"
+				if (child.getDataValue("nodeAddr") == alarmref) {
+                	log.debug "Found Child " + child.name
+                    if (areatype == '1') {
+                	if (val == '0') {
+                      value = 'No Alarm Active'
+                	}
+                	if (val == '6') {
+                      value = 'Burglar Alarm'
+                	}
+                	log.debug "Found: " + alarmref + ' Child: ' + child.name
+                	log.debug "Updating ${child.name} ${alarmref} to ${value}/${val}"
+                	child.sendEvent(name: 'AlarmState', value: value)
+                }
+                	if (areatype == '2') {
+                		if (val == '0') {
+                      	value = 'Not Ready'
+                		}
+                		if (val == '1') {
+                      	value = 'Ready to Arm'
+                		}
+                		if (val == '3') {
+                	  	value = 'Armed with Exit Timer'
+                      	}
+                		if (val == '4') {
+                	  	value = 'Armed Fully'
+                      	}      
+                		log.debug "Found: " + alarmref + ' Child: ' + child.name
+                		log.debug "Updating ${child.name} ${alarmref} to ${value}/${val}"
+                		child.sendEvent(name: 'ArmUpState', value: value)
+                	}
+                    if (areatype == '3') {
+                		if (val == '0') {
+                      	value = 'Disarmed'
+                		}
+                		if (val == '1') {
+                      	value = 'Armed Away'
+                		}
+                		if (val == '2') {
+                	  	value = 'Armed Stay'
+                      	}
+                		if (val == '3') {
+                	  	value = 'Armed Stay Instant'
+                      	}   
+                        if (val == '4') {
+                	  	value = 'Armed Night'
+                      	}
+                        if (val == '5') {
+                	  	value = 'Armed Night Instant'
+                      	}
+                        if (val == '6') {
+                	  	value = 'Armed Vacation'
+                      	}
+                        log.debug "Found: " + alarmref + ' Child: ' + child.name
+                		log.debug "Updating ${child.name} ${alarmref} to ${value}/${val}"
+                		child.sendEvent(name: 'ArmedState', value: value)
+                	}
+                	}
+                	}
+                }
+                
+         }   
         }
         
         

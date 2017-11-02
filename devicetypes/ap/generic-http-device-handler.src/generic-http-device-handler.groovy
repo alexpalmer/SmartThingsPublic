@@ -24,6 +24,8 @@ metadata {
 		attribute "temperature3", "number"
 		attribute "temperature4", "number"
         
+        attribute "defaulttemp", "string"
+        
         attribute "effect", "string"
         attribute "efficiency", "number"
 
@@ -33,6 +35,7 @@ metadata {
 		input("DevicePort", "string", title:"Device Port", description: "Empty assumes port 80.", required: false, displayDuringSetup: true)
 		input("DevicePath", "string", title:"URL Path", description: "Rest of the URL, include forward slash.", displayDuringSetup: true)
 		input(name: "DevicePostGet", type: "enum", title: "POST or GET", options: ["POST","GET"], defaultValue: "POST", required: false, displayDuringSetup: true)
+        input("defaulttemp", "string", title: "Default Reported Temperature", type: "enum", options: ["temperature0","temperature1","temperature2","temperature3","temperature4"], defaultValue: "temperature0", required: false, displayDuringSetup: true)
 		
 	}
 	
@@ -240,6 +243,9 @@ def parse(String description) {
         
         def eff = ((device.currentValue('temperature4')-device.currentValue('temperature1')))/((device.currentValue('temperature2')-device.currentValue('temperature1')))*100.0
         sendEvent (name: 'efficiency', value: eff)
+        
+        def deftemp = device.currentValue(defaulttemp)
+        sendEvent (name: 'temperature', value: deftemp)
         
         
     }

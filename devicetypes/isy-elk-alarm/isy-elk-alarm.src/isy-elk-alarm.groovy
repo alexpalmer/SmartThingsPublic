@@ -13,24 +13,70 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  */
+ /*
+ 1, Alarm State
+	0, No Alarm Active
+	1, Entrance Delay
+	2, Alarm Abort Delay
+	3, Fire Alarm
+	4, Medical
+	5, Police
+	6, Burglar
+2, Arm Up State
+	0, Not Ready
+	1, Ready to Arm
+	2, Ready to Arm w/ Zone Voilated
+	3, Armed with Exit Timer
+	4, Armed Fully
+	5, Forced Armed w/Zone Voilated
+	6, Armed with Bypass
+3, Armed State
+	0, Disarmed
+	1, Armed Away
+	2, Armed Stay
+	3, Armed Stay Instant
+	4, Armed Night
+	5, Armed Night Instant
+	6, Armed Vacation
+ */
 
 metadata {
-    definition (name: "ISY ELK Door", namespace: "isy-elk", author: "Alex Palmer") {
-        capability "Contact Sensor"
+    definition (name: "ISY ELK Alarm", namespace: "isy-elk-alarm", author: "Alex Palmer") {
+        //capability "Contact Sensor"
         capability "Polling"
         capability "Refresh"
         //capability "Actuator"
+        attribute "AlarmState", "string"
+        attribute "ArmUpState", "string"
+        attribute "ArmedState", "string"
         command "updateNA"
+        command "Disarm"
+        command "ArmAway"
+        command "ArmNight"
+        
     }
 
     simulator {
     }
 
     tiles {
-        standardTile("contact", "device.contact", width: 2, height: 2, canChangeIcon: true) {
-            state "closed", label:'${name}', icon:"st.Home.home3", backgroundColor:"#79b821"
-            state "open", label:'${name}', icon:"st.Home.home3", backgroundColor:"#ffffff"
+        standardTile("Mode", "device.ArmedState", decoration: "flat", canChangeBackground: true, width: 2, height: 2) {
+            state "Disarmed", label:'Disarmed', icon:"st.Home.home2", backgroundColor:"#44b621"
+            state "Armed Stay", label:'Armed Stay', icon:"st.Home.home3", backgroundColor:"#ffffff"
+            state "Armed Away", label:'Armed Away', icon:"st.Home.home", backgroundColor:"#ffffff"
+             state "Armed Night", label:'Armed Night', icon:"st.Home.home", backgroundColor:"#ffffff"
         }
+        valueTile("AlarmState", "device.AlarmState", canChangeBackground: true, width: 3, height: 1) {
+            state "No Alarm Active", label:'No Alarm Active', backgroundColor:"#44b621"
+            state "Burlgar Alarm", label:'Burglar Alarm', backgroundColor:"#ffffff"
+         }
+         standardTile("Arm", "device.ArmUpState", width: 1, height: 1){
+         	state "default", label:'Arm Away', action: "ArmAway"
+          }
+          standardTile("Disarm", "device.ArmUpState", width: 1, height: 1){
+         	state "default", label:'Disarm', action: "Disarm", backgroundColor:"#44b621"
+          }
+        
         
         standardTile("refresh", "device.contact", inactiveLabel: false, decoration: "flat") {
             state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
@@ -41,8 +87,8 @@ metadata {
         }
         
         
-        main "contact"
-        details (["contact", "refresh", "update"])
+        main "Mode"
+        details (["Mode", "AlarmState", "update", "refresh", "Arm", "Disarm"])
     }
 }
 
@@ -102,7 +148,7 @@ def poll() {
     if (!device.deviceNetworkId.contains(':')) {
         log.debug "Executing 'poll' from ${device.deviceNetworkId}"
 
-        def path = "/rest/status"
+        def path = "/rest/elk/area/1/get/status"
         getRequest(path)
     }
     else {
@@ -113,7 +159,21 @@ def poll() {
 def refresh() {
     log.debug "Executing 'refresh'"
 
-    def path = "/rest/elk/get/status"
+    def path = "/rest/elk/area/1/get/status"
+    getRequest(path)
+}
+
+def Disarm() {
+    log.debug "Executing 'Disarm'"
+
+    def path = "/rest/elk/area/1/cmd/disarm?code=0927"
+    getRequest(path)
+}
+
+def ArmAway() {
+    log.debug "Executing 'Disarm'"
+
+    def path = "/rest/elk/area/1/cmd/arm?armType=1&code=0927"
     getRequest(path)
 }
 

@@ -30,6 +30,7 @@ metadata {
         command "CsetpointDown"
         command "heat68"
         command "heat65"
+        command "pauto"
         
         //command "setThermostatMode"
     }
@@ -59,7 +60,8 @@ metadata {
             state "off", action:"thermostat.heat", backgroundColor:"#e8e3d8", icon:"st.thermostat.heating-cooling-off", nextState:"heat"
             state "heat", action:"thermostat.cool", backgroundColor:"#ff6e7e", icon:"st.thermostat.heat", nextState:"cool"
             state "cool", action:"thermostat.auto", backgroundColor:"#90d0e8", icon:"st.thermostat.cool", nextState:"auto"
-            state "auto", action:"thermostat.off", backgroundColor:"#e8e3d8", icon:"st.thermostat.auto", nextState:"off"
+            state "auto", action:"thermostat.pauto", backgroundColor:"#e8e3d8", icon:"st.thermostat.auto", nextState:"pauto"
+            state "pauto", label: 'Program', action:"thermostat.off", backgroundColor:"#e8e3d8", icon:"st.thermostat.auto", nextState:"off"
             
         }
         
@@ -313,6 +315,14 @@ def auto(){
     
     def node = getDataValue("nodeAddr").replaceAll(" ", "%20")
     def path = "/rest/nodes/${node}/cmd/CLIMD/3"
+    getRequest(path)
+}
+def pauto(){
+	log.debug "Changing to pauto"
+    sendEvent(name: 'thermostatMode', value: 'pauto')
+    
+    def node = getDataValue("nodeAddr").replaceAll(" ", "%20")
+    def path = "/rest/nodes/${node}/cmd/CLIMD/5"
     getRequest(path)
 }
 
